@@ -12,6 +12,7 @@ model:
   params: 
     !merge [
       !include [!join [*CONFIG_DIR, args]],
+      !include [!join [*CONFIG_DIR, loss], lossconfig],
       !include [!join [*CONFIG_DIR, pipline], pipconfig],
       !include [!join [*CONFIG_DIR, model], netconfig]
     ]

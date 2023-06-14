@@ -1,19 +1,35 @@
+import os
 import numpy as np
+from utils.np import psvfn
 import matplotlib.pyplot as plt
+from libs.basicIO import pathBIO
 from utils.preprocessing.timeseries.basicTS import smoothing as smoothing_function
 
-class Neon:
-    def __init__(self, xlabel='x', ylabel='y', color='#D9D9D9', font='Purisa', title_fontdict=None, labels_fontdict=None, grid_args_dict=None):
+class Plot1D:
+    """
+    Example:[inside args.yaml]
+        plot: plot1D:neon
+        plot: plot1D:@dark_background
+        plot: plot1D:@Solarize_Light2
+        plot: plot1D:@ggplot
+    """
+    def __init__(self, xlabel='x', ylabel='y', color='#D9D9D9', font=None, title_fontdict=None, labels_fontdict=None, grid_args_dict=None, mplstyle=None):
+        self.mplstyle = str('neon' if mplstyle is None else mplstyle)
         self.title_fontdict = title_fontdict if title_fontdict else dict(family=[font, 'Purisa', 'sans-serif', 'serif'], color=color, weight='ultralight')
         self.labels_fontdict = labels_fontdict if labels_fontdict else dict(family=[font, 'Purisa', 'sans-serif', 'serif'], color=color, weight='bold', fontsize='x-large')
         self.grid_args_dict = grid_args_dict if grid_args_dict else dict(zorder=0.5, alpha=.02, color=color)
 
-        style = 'https://raw.githubusercontent.com/halfbloodprincecode/cache/master/styles/py/neon.mplstyle'
+        if self.mplstyle.startswith('@'):
+            style = self.mplstyle[1:]
+        else:
+            style = pathBIO('//utils/plots/style/{}.mplstyle'.format(self.mplstyle))
         plt.style.use(style)
         self.fig = plt.figure(figsize=(6, 4), facecolor=None)
         # self.fig.patch.set_alpha(.08)
         # plt.suptitle('suptitle', fontdict=self.title_fontdict)
         # plt.title('title', fontdict=self.title_fontdict)
+        
+        self.labels_fontdict = {}
         plt.xlabel(xlabel, fontdict=self.labels_fontdict)
         plt.ylabel(ylabel, fontdict=self.labels_fontdict)
         plt.grid(**self.grid_args_dict)
@@ -48,14 +64,26 @@ class Neon:
             self.plot(X, Y, label=f'{label}sharp', plt_show=plt_show, smoothing=False, smooth_dpi=smooth_dpi, smooth_k=smooth_k)
         else:
             self.plot(X, Y, label=label, plt_show=plt_show, smoothing=smoothing, smooth_dpi=smooth_dpi, smooth_k=smooth_k)
+    
     def savefig(self, path, dpi=1200, bbox_inches='tight', **kwargs):
-        try:
-            from libs.basicIO import pathBIO
-        except Exception as e:
-            pathBIO = lambda x: x
-        return self.fig.savefig(pathBIO(path), dpi=dpi, bbox_inches=bbox_inches, **kwargs)
+        dstpath = pathBIO(path)
+        os.makedirs(os.path.split(dstpath)[0], exist_ok=True)
+        savefig_result = self.fig.savefig(dstpath, dpi=dpi, bbox_inches=bbox_inches, **kwargs)
+        plt.close(self.fig)
+        return savefig_result
 
-    def plot(self, x, y, ax=None, label=None, plt_show=False, smoothing=False, smooth_k=3, smooth_dpi=300):
+    def plot(self, x=None, y=None, ax=None, label=None, plt_show=False, smoothing=False, smooth_k=3, smooth_dpi=300, ffty=False, ffty_div2N=False, passive_fn=None):
+        if (x is None) and (not (y is None)):
+            x = range(y.shape[0])
+        assert (not ((x is None) or (y is None))), '`x`, `y` both of this must be `not None` | (`x` is `None` == `{}`) | (`y` is `None` == `{}`)'.format(x is None, y is None)
+        
+        if ffty:
+            y = np.fft.fft(y)
+            if ffty_div2N:
+                y = y / y.shape[0]
+        
+        y = psvfn(y, passive_fn)
+        
         if ax is None:
             ax = self.fig.gca() # ax = plt.gca()
         # ax.patch.set_facecolor('#3498db')
@@ -77,8 +105,8 @@ class Neon:
         
 
 if __name__ == '__main__':
-    neon = Neon(xlabel='x1', ylabel='y1')
-    neon2 = Neon(xlabel='x2', ylabel='y2')
+    neon = Plot1D(xlabel='x1', ylabel='y1')
+    neon2 = Plot1D(xlabel='x2', ylabel='y2')
     x = np.linspace(0, 4, 100)
     y = np.sin(np.pi*x + 1e-6)/(np.pi*x + 1e-6)
     for cont in range(5):
@@ -88,9 +116,9 @@ if __name__ == '__main__':
     
     plt.show()
 
-    # neon = Neon(xlabel='val-step', ylabel='val-loss')
-    # neon2 = Neon(xlabel='val-step', ylabel='val-loss')
-    # neon3 = Neon(xlabel='val-step', ylabel='val-loss')
+    # neon = Plot1D(xlabel='val-step', ylabel='val-loss')
+    # neon2 = Plot1D(xlabel='val-step', ylabel='val-loss')
+    # neon3 = Plot1D(xlabel='val-step', ylabel='val-loss')
     # neon.plot_metrics(
     #     hash = '5ee327ab28725a85bb9fcf6bd3a379052b659d9b',
     #     db = '/media/alihejrati/3E3009073008C83B/Code/Genie-ML/logs/vqgan/10/metrics2222.db',

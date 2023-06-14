@@ -40,8 +40,8 @@ class AppBase:
         index = kwargs.get('index', 0)
         y_name = col_names.split(',')[index].strip()
 
-        from utils.plots.neonGlowing import Neon
-        neon = Neon(xlabel=kwargs.get('xlabel', 'epoch'), ylabel=kwargs.get('ylabel', y_name))
+        from utils.plots.plot1d import Plot1D
+        neon = Plot1D(xlabel=kwargs.get('xlabel', 'epoch'), ylabel=kwargs.get('ylabel', y_name))
         neon.plot_metrics(
             tbl = kwargs.get('tbl', '2022_12_14t19_46_35_eyepacs_vqgan'),
             hash = kwargs.get('hash', '7cea1c511ce7e9bab00be269201cc16effa8ad12'),

@@ -210,7 +210,13 @@ def is_prepared(adr, fname='.ready'):
 def mark_prepared(adr, fname='.ready'):
     pathlib.Path(adr).joinpath(fname).touch()
 
-def compressor(src_dir, dst_file, mode='tar'):
+def compressor(src_dir: str, dst_file: str, mode=None):
+    if mode is None:
+        if dst_file.endswith('.tar'):
+            mode = 'tar'
+        elif dst_file.endswith('.zip'):
+            mode = 'zip'
+
     if mode == 'tar':
         pass
     

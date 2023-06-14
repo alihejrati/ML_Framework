@@ -11,6 +11,7 @@ import torch.nn.functional as F
 from omegaconf import OmegaConf
 from torchsummary import summary
 from stringcase import pascalcase
+from utils.pl.plPlot import fwd_plot
 from libs.dyimport import instantiate_from_config
 from libs.basicIO import signal_save, compressor, puml, fwrite
 
@@ -177,7 +178,7 @@ class plModuleBase(pl.LightningModule):
             if not self.Rfn.startswith('_'):
                 self.Rfn = '_' + self.Rfn
 
-            if self.Rfn.endswith('lab') or self.Rfn in ['_synthesis']:
+            if self.Rfn.endswith('lab') or self.Rfn in ['_synthesis', '_plot']:
                 for specificfn in ['forward', 'training_step', 'validation_step', 'on_validation_epoch_end']:
                     setattr(
                         self,
@@ -212,6 +213,19 @@ class plModuleBase(pl.LightningModule):
                     print('Deleting key {} from state_dict.'.format(k))
                     del sd[k]
         self.load_state_dict(sd, strict=False)
+    
+    def predefined_net_step_master0(self, net):
+        pipline_name = f'{net}_step'
+        def predefined_net_step(batch):
+            cowsay.cow('NotImplementedError:\nplease define pipline `{}`.'.format(pipline_name))
+            sys.exit()
+        return predefined_net_step
+    
+    def predefined_net_step_master(self, net):
+        pipline_name = self.net2pipline(net)
+        def predefined_net_step_slave(batch):
+            return getattr(self, pipline_name).forward(**batch)
+        return predefined_net_step_slave
     
     def getbatch(self, batch):
         """It can be overwrite in child class"""
@@ -259,6 +273,8 @@ class plModuleBase(pl.LightningModule):
         print('orginal forward')
         raise NotImplementedError()
     
+    
+    ##################[only once at end of val epoch]#################### [default]
     def predefined_training_step(self, batch, batch_idx, split='train'):
         return
 
@@ -266,7 +282,7 @@ class plModuleBase(pl.LightningModule):
         return
     
     def predefined_forward(self, *args, **kwargs):
-        print('predefined_forward')
+        logger.error('NotImplementedError: `predefined_forward`')
         return NotImplementedError()
 
     def predefined_on_validation_epoch_end(self):
@@ -276,21 +292,27 @@ class plModuleBase(pl.LightningModule):
         else:
             cowsay.cow('done')
         sys.exit()
-    
-    def predefined_net_step_master0(self, net):
-        pipline_name = f'{net}_step'
-        def predefined_net_step(batch):
-            cowsay.cow('NotImplementedError:\nplease define pipline `{}`.'.format(pipline_name))
-            sys.exit()
-        return predefined_net_step
-    
-    def predefined_net_step_master(self, net):
-        pipline_name = self.net2pipline(net)
-        def predefined_net_step_slave(batch):
-            return getattr(self, pipline_name).forward(**batch)
-        return predefined_net_step_slave
+    ######################################################################
 
-    def forward_synthesis(self):
+    ##################[every step - one period]#################### [plot]
+    def forward_plot(self, batch):
+        return fwd_plot(batch=batch, plot_params=getattr(self, 'plot', dict()), sigkey=self.signal_key)
+                   
+    def training_step_plot(self, batch, batch_idx, split='train'):
+        self.training_step_flag = True
+        return self(batch)
+    
+    def validation_step_plot(self, batch, batch_idx, split='val'):
+        if bool(getattr(self, 'training_step_flag', False)):
+            return self(batch)
+    
+    def on_validation_epoch_end_plot(self):
+        if bool(getattr(self, 'training_step_flag', False)):
+            cowsay.cow('done')
+            sys.exit()
+    ################################################################
+
+    def forward_synthesis(self): # only once at end of val epoch
         dirname = getattr(self, 'synthesis_dirname', 'synthesis')
         for c in range(getattr(self, 'nclass', 1)): # TODO
             N = int(getattr(self, 'nsynthesis', dict()).get(c, 200))

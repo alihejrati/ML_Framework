@@ -58,7 +58,15 @@ class ConfigBase:
         configs = []
         for _cfg in opt.base:
             if _cfg.lower().endswith('.yaml') or _cfg.lower().endswith('.json'):
-                cfg = _cfg
+                if not os.path.exists(_cfg):
+                    _cfg2 = pathBIO('//apps/{}/configs/{}'.format(app_name_master, _cfg))
+                    if os.path.exists(_cfg2):
+                        cfg = _cfg2
+                    else:
+                        cowsay.cow('NotImplementedError:\nplease define `APP={} | config={}`'.format(app_name_master, _cfg))
+                        sys.exit()
+                else:
+                    cfg = _cfg
             else:
                 cfg = pathBIO('//apps/{}/configs/{}/.yaml'.format(app_name_master, _cfg))
                 if not os.path.exists(cfg):

@@ -1,8 +1,8 @@
 
 import numpy as np
 from PIL import Image
-from utils.ptDatasets.D import D_Base
-from utils.ptDatasets.imageNet import ImageNetTrain, ImageNetValidation
+from utils.pt.datasets.D import D_Base
+from utils.pt.datasets.imageNet import ImageNetTrain, ImageNetValidation
 
 class D(D_Base):
     def fetch(self, signal_path):
